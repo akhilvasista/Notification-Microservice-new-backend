@@ -1,0 +1,297 @@
+{
+  "info": {
+    "name": "Qavach Notification Service",
+    "description": "Complete API collection for the Notification Microservice",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
+    { "key": "token", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "  pm.test('Login successful', () => pm.expect(json.success).to.be.true);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@qavach.com\",\n  \"password\": \"Admin@123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "Emit – User Signed Up",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/events/emit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"USER_SIGNED_UP\",\n  \"userId\": \"user_123\",\n  \"timestamp\": \"2026-05-18T10:00:00Z\",\n  \"metadata\": { \"source\": \"mobile_app\" }\n}"
+            }
+          }
+        },
+        {
+          "name": "Emit – Child Added",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/events/emit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"CHILD_ADDED\",\n  \"userId\": \"user_123\",\n  \"childId\": \"child_456\",\n  \"childName\": \"Arjun\",\n  \"screeningVenue\": \"Bangalore Center\",\n  \"screeningDate\": \"2026-06-10\",\n  \"timestamp\": \"2026-05-18T10:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Emit – Appointment Booked",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/events/emit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"APPOINTMENT_BOOKED\",\n  \"userId\": \"user_123\",\n  \"childId\": \"child_456\",\n  \"appointmentDate\": \"2026-06-15T10:00:00Z\",\n  \"centerId\": \"CENTER_BLR\",\n  \"timestamp\": \"2026-05-18T10:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Emit – Daily Gamification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/events/emit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"DAILY_GAMIFICATION\",\n  \"userId\": \"user_123\",\n  \"pointsEarned\": 25,\n  \"totalPoints\": 150,\n  \"badges\": 2,\n  \"timestamp\": \"2026-05-18T09:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Emit – Appointment Cancelled",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/events/emit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"APPOINTMENT_CANCELLED\",\n  \"userId\": \"user_123\",\n  \"childId\": \"child_456\",\n  \"appointmentDate\": \"2026-06-15T10:00:00Z\",\n  \"timestamp\": \"2026-05-18T10:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Emit – Staff Slot Assigned",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/events/emit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"STAFF_SLOT_ASSIGNED\",\n  \"userId\": \"staff_789\",\n  \"staffEmail\": \"staff@qavach.com\",\n  \"slotDate\": \"2026-06-10\",\n  \"slotTime\": \"10:00\",\n  \"location\": \"Bangalore Center\",\n  \"status\": \"Assigned\",\n  \"timestamp\": \"2026-05-18T10:00:00Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Emit – Report Published",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/events/emit",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"REPORT_PUBLISHED\",\n  \"userId\": \"user_123\",\n  \"childId\": \"child_456\",\n  \"timestamp\": \"2026-05-18T10:00:00Z\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin – Configs",
+      "item": [
+        {
+          "name": "List Configs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/configs" }
+        },
+        {
+          "name": "Create Config",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/configs",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"USER_SIGNED_UP\",\n  \"name\": \"Welcome Email\",\n  \"channels\": [\"email\", \"push\"],\n  \"templateIds\": { \"email\": \"tmpl_signup_email\", \"push\": \"tmpl_signup_push\" },\n  \"schedule\": { \"type\": \"instant\" },\n  \"priority\": \"high\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Config by ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/configs/:id" }
+        },
+        {
+          "name": "Toggle Config (Pause/Resume)",
+          "request": { "method": "PATCH", "url": "{{baseUrl}}/admin/configs/:id/toggle" }
+        },
+        {
+          "name": "Delete Config",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/admin/configs/:id" }
+        }
+      ]
+    },
+    {
+      "name": "Admin – Templates",
+      "item": [
+        {
+          "name": "List Templates",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/templates" }
+        },
+        {
+          "name": "Create Email Template",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/templates",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateId\": \"tmpl_custom_email\",\n  \"name\": \"Custom Email\",\n  \"type\": \"email\",\n  \"subject\": \"Hello {{name}}\",\n  \"body\": \"<p>Hi {{name}}, welcome!</p>\",\n  \"variables\": [\"name\"]\n}"
+            }
+          }
+        },
+        {
+          "name": "Preview Template",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/templates/tmpl_signup_email/preview",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"context\": {\n    \"name\": \"Sandeep\",\n    \"appLink\": \"https://app.qavach.com/add-child\"\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin – Bulk",
+      "item": [
+        {
+          "name": "Trigger Bulk Campaign",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/admin/bulk",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"templateId\": \"tmpl_add_child_reminder_email\",\n  \"channels\": [\"email\", \"push\"],\n  \"filters\": {\n    \"inactiveDays\": 15,\n    \"hasChild\": false\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin – Logs & Metrics",
+      "item": [
+        {
+          "name": "Get Notification Logs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/logs?userId=user_123&status=sent&page=1&limit=20",
+              "query": [
+                { "key": "userId", "value": "user_123" },
+                { "key": "status", "value": "sent" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Metrics",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/metrics" }
+        },
+        {
+          "name": "Get Queue Metrics",
+          "request": { "method": "GET", "url": "{{baseUrl}}/admin/metrics/queue" }
+        },
+        {
+          "name": "Retry Failed Notification",
+          "request": { "method": "POST", "url": "{{baseUrl}}/admin/logs/:logId/retry" }
+        }
+      ]
+    },
+    {
+      "name": "Devices",
+      "item": [
+        {
+          "name": "Register Device Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/devices/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"user_123\",\n  \"token\": \"fcm_device_token_abc123\",\n  \"platform\": \"android\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Deregister Device Token",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/devices/fcm_device_token_abc123"
+          }
+        },
+        {
+          "name": "Get User Devices",
+          "request": { "method": "GET", "url": "{{baseUrl}}/devices/user/user_123" }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": { "method": "GET", "url": "http://localhost:3000/health" }
+        }
+      ]
+    }
+  ]
+}

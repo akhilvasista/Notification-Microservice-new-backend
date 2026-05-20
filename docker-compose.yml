@@ -1,0 +1,133 @@
+version: '3.9'
+
+services:
+  # ── Notification Service ────────────────────────────────────────────────────
+  notification-service:
+    build:
+      context: .
+      target: production
+    container_name: notification-service
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://mongo:27017/notification_service
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-changeme-in-production}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - SES_FROM_EMAIL=${SES_FROM_EMAIL}
+      - SES_FROM_NAME=${SES_FROM_NAME:-Qavach Health}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - MSG91_AUTH_KEY=${MSG91_AUTH_KEY}
+      - MSG91_SENDER_ID=${MSG91_SENDER_ID:-QAVACH}
+      - MSG91_DLT_TE_ID=${MSG91_DLT_TE_ID}
+      - MS_GRAPH_TENANT_ID=${MS_GRAPH_TENANT_ID}
+      - MS_GRAPH_CLIENT_ID=${MS_GRAPH_CLIENT_ID}
+      - MS_GRAPH_CLIENT_SECRET=${MS_GRAPH_CLIENT_SECRET}
+      - LOG_LEVEL=info
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - notification-net
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── MongoDB ─────────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7.0
+    container_name: notification-mongo
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/init.js:ro
+    environment:
+      - MONGO_INITDB_DATABASE=notification_service
+    networks:
+      - notification-net
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Redis ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    container_name: notification-redis
+    ports:
+      - '6379:6379'
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - notification-net
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ── Mongo Express (Dev UI) ──────────────────────────────────────────────────
+  mongo-express:
+    image: mongo-express:latest
+    container_name: notification-mongo-express
+    ports:
+      - '8081:8081'
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin123
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - notification-net
+    profiles:
+      - dev
+
+  # ── Bull Board (Queue UI) ───────────────────────────────────────────────────
+  bull-board:
+    image: deadly0/bull-board:latest
+    container_name: notification-bull-board
+    ports:
+      - '3001:3000'
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - BULL_PREFIX=bull
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - notification-net
+    profiles:
+      - dev
+
+volumes:
+  mongo_data:
+  redis_data:
+
+networks:
+  notification-net:
+    driver: bridge
