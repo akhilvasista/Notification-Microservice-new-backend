@@ -12,7 +12,8 @@
     "test:integration": "jest tests/integration --forceExit",
     "seed": "ts-node scripts/seed.ts",
     "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed:notifications": "ts-node src/seeds/seedNotifications.ts"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.600.0",

@@ -150,12 +150,13 @@ export interface JobPayload {
 
   eventId?: string;
 
-  channels: ('email' | 'push' | 'sms')[];
+  channels: ('email' | 'push' | 'sms' |'inapp')[];
 
   templateIds: {
     email?: string;
     push?: string;
     sms?: string;
+    inapp?: string;
   };
 
   stopConditions?: Record<string, unknown>;

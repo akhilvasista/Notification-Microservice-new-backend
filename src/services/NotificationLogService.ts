@@ -6,7 +6,7 @@ export class NotificationLogService {
   async createLog(data: {
     userId: string;
     event: string;
-    channel: 'email' | 'push' | 'sms';
+    channel: 'email' | 'push' | 'sms' | 'inapp';
     templateId?: string;
     status: NotificationStatus;
     idempotencyKey: string;
@@ -73,7 +73,7 @@ export class NotificationLogService {
 
   private async updateMetrics(
     event: string,
-    channel: 'email' | 'push' | 'sms',
+    channel: 'email' | 'push' | 'sms' | 'inapp',
     status: NotificationStatus
   ): Promise<void> {
     const date = new Date().toISOString().split('T')[0];

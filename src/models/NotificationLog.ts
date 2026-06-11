@@ -5,7 +5,7 @@ export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'retrying' | 's
 export interface INotificationLog extends Document {
   userId: string;
   event: string;
-  channel: 'email' | 'push' | 'sms';
+  channel: 'email' | 'push' | 'sms' |'inapp';
   templateId?: string;
   status: NotificationStatus;
   attempt: number;
@@ -24,7 +24,7 @@ const NotificationLogSchema = new Schema<INotificationLog>(
   {
     userId: { type: String, required: true, index: true },
     event: { type: String, required: true, index: true },
-    channel: { type: String, enum: ['email', 'push', 'sms'], required: true },
+    channel: { type: String, enum: ['email', 'push', 'sms','inapp'], required: true },
     templateId: { type: String },
     status: {
       type: String,

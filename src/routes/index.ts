@@ -128,7 +128,7 @@ router.post('/test/schedule-email', async (_req, res) => {
 
           interval: 1,
 
-          times: ['19:38'],
+          times: ['11:06'],
         },
       }
     );
@@ -238,3 +238,295 @@ router.post(
 );
 
 export { router, eventProcessor };
+
+
+
+//'CHILD_NOT_ADDED_REMINDER',
+
+router.post(
+  '/test/child-not-added',
+
+  async (_req, res) => {
+    try {
+      const jobIds =
+        await scheduler.scheduleCampaign(
+          {
+            userId: 'USER_002',
+
+            event:
+              'CHILD_NOT_ADDED_REMINDER',
+
+            channels: ['email'],
+
+            templateIds: {
+              email:
+                'child_not_added_reminder_email',
+            },
+
+            priority: 'normal',
+
+            context: {
+              email:
+                'akhil1999vasista@gmail.com',
+
+              parentName: 'Akhil',
+
+              appLink:
+                'https://app.qavach.com',
+            },
+          },
+
+          {
+            type: 'scheduled',
+
+            timezone: 'Asia/Kolkata',
+
+            occurrence: {
+              frequency: 'daily',
+
+              interval: 1,
+
+              times: ['12:56'],
+            },
+          }
+        );
+
+      res.json({
+        success: true,
+        jobIds,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        error,
+      });
+    }
+  }
+);
+
+
+
+//social media 
+
+router.post(
+  '/test/social-post',
+
+  async (_req, res) => {
+    try {
+      await scheduler.scheduleBulk([
+        {
+          userId: 'USER_1',
+
+          event: 'SOCIAL_MEDIA_POSTED',
+
+          channels: ['email'],
+
+          templateIds: {
+            email: 'social_media_post_email',
+          },
+
+          priority: 'normal',
+
+          context: {
+            email:
+              'akhil1999vasista@gmail.com',
+
+            parentName: 'Akhil',
+
+            contentTitle:
+              '5 Preventive Health Tips',
+
+            platform: 'YouTube',
+
+            contentLink:
+              'https://youtube.com/example',
+          },
+        },
+      ]);
+
+      res.json({
+        success: true,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        error,
+      });
+    }
+  }
+);
+
+
+//child-added-success
+
+router.post(
+  '/test/child-added-success',
+
+  async (_req, res) => {
+    try {
+      await scheduler.scheduleInstant({
+        userId: 'USER_005',
+
+        event: 'CHILD_ADDED_SUCCESS',
+
+        channels: ['email'],
+
+        templateIds: {
+          email:
+            'child_added_success_email',
+        },
+
+        priority: 'high',
+
+        context: {
+          email:
+            'akhil1999vasista@gmail.com',
+
+          parentName: 'Akhil',
+
+          childName: 'Arjun',
+
+          screeningVenue:
+            'Bangalore Health Center',
+
+          screeningDate:
+            '25 May 2026',
+
+          paymentAmount: '499',
+
+          transactionId:
+            'TXN123456',
+        },
+      });
+
+      res.json({
+        success: true,
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        error,
+      });
+    }
+  }
+);
+
+
+
+//gamification
+
+router.post('/test/gamification', async (_req, res) => {
+  try {
+    await scheduler.scheduleCampaign(
+      {
+        userId: 'USER_001',
+        event: 'GAMIFICATION_DAILY',
+        channels: ['email'],
+        templateIds: {
+          email: 'gamification_daily_email',
+        },
+        priority: 'normal',
+        context: {
+          email: 'akhil1999vasista@gmail.com',
+          parentName: 'Akhil',
+          pointsEarned: 120,
+          badgesWon: 'Health Starter',
+          progressPercentage: 35,
+          daysRemaining: 13,
+        },
+      },
+      {
+        type: 'scheduled',
+        timezone: 'Asia/Kolkata',
+        occurrence: {
+          frequency: 'daily',
+          interval: 1,
+          times: ['12:02'],
+        },
+      }
+    );
+
+    res.json({
+      success: true,
+      message: 'Gamification campaign scheduled',
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      error,
+    });
+  }
+});
+
+
+
+//screening-reminder-3-days
+router.post(
+  '/test/screening-reminder-3-days',
+  async (_req, res) => {
+    try {
+      await scheduler.scheduleCampaign(
+        {
+          userId: 'USER_001',
+
+          event: 'SCREENING_REMINDER_3_DAYS',
+
+          channels: ['email'],
+
+          templateIds: {
+            email: 'screening_reminder_3_days',
+          },
+
+          priority: 'high',
+
+          context: {
+            email: 'akhil1999vasista@gmail.com',
+
+            parentName: 'Akhil',
+
+            childName: 'Arjun',
+
+            screeningVenue: 'Bangalore Health Center',
+
+            screeningDate: '25 June 2026',
+          },
+        },
+
+        {
+          type: 'scheduled',
+
+          timezone: 'Asia/Kolkata',
+
+          occurrence: {
+            frequency: 'daily',
+
+            interval: 1,
+
+            times: [
+              '12:49', // CHANGE THIS
+            ],
+          },
+        }
+      );
+
+      res.json({
+        success: true,
+        message: 'Screening reminder scheduled',
+      });
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        success: false,
+        error,
+      });
+    }
+  }
+);

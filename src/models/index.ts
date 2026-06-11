@@ -6,6 +6,7 @@ export { IdempotencyKey } from './IdempotencyKey';
 export { ScheduledJob } from './ScheduledJob';
 export { AdminUser } from './AdminUser';
 export { NotificationMetric } from './NotificationMetric';
+export { InAppNotification } from './InAppNotification';
 
 export type { INotificationConfig, ISchedule, IRepeat, IConditions } from './NotificationConfig';
 export type { INotificationTemplate } from './NotificationTemplate';
@@ -15,3 +16,5 @@ export type { IIdempotencyKey } from './IdempotencyKey';
 export type { IScheduledJob } from './ScheduledJob';
 export type { IAdminUser } from './AdminUser';
 export type { INotificationMetric } from './NotificationMetric';
+export type { IInAppNotification } from './InAppNotification';
+

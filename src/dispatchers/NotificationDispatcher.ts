@@ -3,10 +3,11 @@ import { FCMDispatcher } from '../integrations/FCMDispatcher';
 import { MSG91Dispatcher } from '../integrations/MSG91Dispatcher';
 import { DeviceToken } from '../models/DeviceToken';
 import { logger } from '../utils/logger';
+import { InAppNotificationService } from '../services/InAppNotificationService';
 
 export interface DispatchPayload {
   userId: string;
-  channel: 'email' | 'push' | 'sms';
+  channel: 'email' | 'push' | 'sms' |'inapp';
   userEmail?: string;
   userPhone?: string;
   subject?: string;
@@ -18,7 +19,7 @@ export interface DispatchPayload {
 
 export interface DispatchResult {
   success: boolean;
-  channel: 'email' | 'push' | 'sms';
+  channel: 'email' | 'push' | 'sms' |'inapp';
   providerResponse?: Record<string, unknown>;
   error?: string;
 }
@@ -27,25 +28,49 @@ export class NotificationDispatcher {
   private ses: SESDispatcher;
   private fcm: FCMDispatcher;
   private msg91: MSG91Dispatcher;
+  private inApp: InAppNotificationService;
 
   constructor() {
     this.ses = new SESDispatcher();
     this.fcm = new FCMDispatcher();
     this.msg91 = new MSG91Dispatcher();
+    this.inApp = new InAppNotificationService();
   }
 
   async dispatch(payload: DispatchPayload): Promise<DispatchResult> {
     try {
-      switch (payload.channel) {
-        case 'email':
-          return await this.sendEmail(payload);
-        case 'push':
-          return await this.sendPush(payload);
-        case 'sms':
-          return await this.sendSMS(payload);
-        default:
-          throw new Error(`Unknown channel: ${payload.channel}`);
-      }
+      // switch (payload.channel) {
+      //   case 'email':
+      //     return await this.sendEmail(payload);
+      //   case 'push':
+      //     return await this.sendPush(payload);
+      //   case 'sms':
+      //     return await this.sendSMS(payload);
+      //   default:
+      //     throw new Error(`Unknown channel: ${payload.channel}`);
+      // }
+
+
+    switch (payload.channel) {
+  case 'email':
+    return await this.sendEmail(payload);
+
+  case 'push':
+    return await this.sendPush(payload);
+
+  case 'sms':
+    return await this.sendSMS(payload);
+
+  case 'inapp':
+    return await this.sendInApp(payload);
+
+  default:
+    throw new Error(`Unknown channel: ${payload.channel}`);
+}
+
+
+
+
     } catch (error) {
       logger.error({ error, channel: payload.channel, userId: payload.userId }, 'Dispatch failed');
       return {
@@ -104,4 +129,22 @@ export class NotificationDispatcher {
 
     return { success: true, channel: 'sms', providerResponse: result };
   }
+
+private async sendInApp(
+  payload: DispatchPayload
+): Promise<DispatchResult> {
+  await this.inApp.create({
+    userId: payload.userId,
+    event: payload.data?.event || 'UNKNOWN',
+    title: payload.title || 'Notification',
+    body: payload.body,
+    type: payload.data?.type || 'general',
+    metadata: payload.data || {},
+  });
+
+  return {
+    success: true,
+    channel: 'inapp',
+  };
+}
 }

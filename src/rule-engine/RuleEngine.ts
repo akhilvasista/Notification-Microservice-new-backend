@@ -3,6 +3,7 @@ import { EventPayload, EventType } from '../events/EventTypes';
 import { Scheduler } from '../scheduler/Scheduler';
 import { logger } from '../utils/logger';
 import { parseDelay, calculateReminderTimes } from '../utils/helpers';
+import { ISchedule } from '../models/NotificationConfig';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -54,47 +55,177 @@ export class RuleEngine {
     return rest;
   }
 
-  private async scheduleFromConfig(
-    config: AnyRecord,
-    payload: AnyRecord,
-    userId: string,
-    event: string
-  ): Promise<void> {
-    const schedule = config.schedule as AnyRecord;
-    const repeat = config.repeat as { count: number; frequency: string } | undefined;
-    const channels = config.channels as ('email' | 'push' | 'sms')[];
-    const templateIds = config.templateIds as { email?: string; push?: string; sms?: string };
+//   private async scheduleFromConfig(
+//     config: AnyRecord,
+//     payload: AnyRecord,
+//     userId: string,
+//     event: string
+//   ): Promise<void> {
+//     const schedule = config.schedule as AnyRecord;
+//     const repeat = config.repeat as { count: number; frequency: string } | undefined;
+//     const channels = config.channels as ('email' | 'push' | 'sms')[];
+//     const templateIds = config.templateIds as { email?: string; push?: string; sms?: string };
 
-    const jobPayload = {
-      userId,
-      event,
-      eventId: payload.eventId as string | undefined,
-      channels,
-      templateIds,
-      stopConditions: config.stopConditions as AnyRecord | undefined,
-      fallback: config.fallback as { sms?: boolean; email?: boolean; push?: boolean } | undefined,
-      priority: (config.priority as string) || 'normal',
-      context: this.buildContext(payload),
-      configId: String(config._id),
+//     const jobPayload = {
+//       userId,
+//       event,
+//       eventId: payload.eventId as string | undefined,
+//       channels,
+//       templateIds,
+//       stopConditions: config.stopConditions as AnyRecord | undefined,
+//       fallback: config.fallback as { sms?: boolean; email?: boolean; push?: boolean } | undefined,
+//       priority: (config.priority as string) || 'normal',
+//       context: this.buildContext(payload),
+//       configId: String(config._id),
+//     };
+
+//   //   const scheduleType = schedule.type as string;
+
+//   //   if (scheduleType === 'instant') {
+//   //     await this.scheduler.scheduleInstant(jobPayload);
+//   //   }
+//   //    else if (scheduleType === 'delayed') {
+//   //     const delay = schedule.delay as string | undefined;
+//   //     const delayMs = delay ? parseDelay(delay) : 0;
+//   //     if (repeat && repeat.count > 0) {
+//   //       await this.scheduler.scheduleRepeating(jobPayload, delayMs, repeat as { count: number; frequency: 'hourly' | 'daily' | 'weekly' | 'monthly' });
+//   //     } else {
+//   //       await this.scheduler.scheduleDelayed(jobPayload, delayMs);
+//   //     }
+//   //   } else if (scheduleType === 'cron') {
+//   //     const expr = schedule.cronExpression as string;
+//   //     if (expr) await this.scheduler.scheduleCron(jobPayload, expr);
+//   //   }
+//   // }
+
+
+// const scheduleType = schedule.type as string;
+
+// if (scheduleType === 'instant') {
+//   await this.scheduler.scheduleInstant(
+//     jobPayload
+//   );
+// }
+// else if (scheduleType === 'scheduled') {
+//   // await this.scheduler.scheduleCampaign(
+//   //   jobPayload,
+//   //   config.schedule
+//   // );
+
+// await this.scheduler.scheduleCampaign(
+//   jobPayload,
+//   config.schedule as ISchedule
+// );
+
+
+// }
+// else {
+//   logger.warn(
+//     {
+//       scheduleType,
+//       event,
+//       configId: String(config._id),
+//     },
+//     'Unsupported schedule type'
+//   );
+// }
+//   }
+
+
+
+private async scheduleFromConfig(
+  config: AnyRecord,
+  payload: AnyRecord,
+  userId: string,
+  event: string
+): Promise<void> {
+  const schedule = config.schedule as AnyRecord;
+
+  const channels =
+    config.channels as (
+      'email' | 'push' | 'sms' |'inapp'
+    )[];
+
+  const templateIds =
+    config.templateIds as {
+      email?: string;
+      push?: string;
+      sms?: string;
+      inapp?: string;
     };
 
-    const scheduleType = schedule.type as string;
+    console.log('CONFIG CHANNELS =>', config.channels);
+console.log('CONFIG TEMPLATE IDS =>', config.templateIds);
 
-    if (scheduleType === 'instant') {
-      await this.scheduler.scheduleInstant(jobPayload);
-    } else if (scheduleType === 'delayed') {
-      const delay = schedule.delay as string | undefined;
-      const delayMs = delay ? parseDelay(delay) : 0;
-      if (repeat && repeat.count > 0) {
-        await this.scheduler.scheduleRepeating(jobPayload, delayMs, repeat as { count: number; frequency: 'hourly' | 'daily' | 'weekly' | 'monthly' });
-      } else {
-        await this.scheduler.scheduleDelayed(jobPayload, delayMs);
-      }
-    } else if (scheduleType === 'cron') {
-      const expr = schedule.cronExpression as string;
-      if (expr) await this.scheduler.scheduleCron(jobPayload, expr);
-    }
+  const jobPayload = {
+    userId,
+
+    event,
+
+    eventId:
+      payload.eventId as string | undefined,
+
+    channels,
+
+    templateIds,
+
+    stopConditions:
+      config.stopConditions as
+        | AnyRecord
+        | undefined,
+
+    fallback:
+      config.fallback as
+        | {
+            sms?: boolean;
+            email?: boolean;
+            push?: boolean;
+          }
+        | undefined,
+
+    priority:
+      (config.priority as string) ||
+      'normal',
+
+    context:
+      this.buildContext(payload),
+
+    configId: String(config._id),
+  };
+
+  const scheduleType =
+    schedule.type as string;
+
+  if (scheduleType === 'instant') {
+    await this.scheduler.scheduleInstant(
+      jobPayload
+    );
   }
+  else if (
+    scheduleType === 'scheduled'
+  ) {
+    await this.scheduler.scheduleCampaign(
+      jobPayload,
+      config.schedule as ISchedule
+    );
+  }
+  else {
+    logger.warn(
+      {
+        scheduleType,
+        event,
+        configId: String(config._id),
+      },
+      'Unsupported schedule type'
+    );
+  }
+}
+
+
+
+
+
+
 
   private async handleAppointmentReminders(config: AnyRecord, payload: AnyRecord): Promise<void> {
     const appointmentDate = payload.appointmentDate as string | undefined;
