@@ -89,37 +89,6 @@ npm run dev         # starts with hot-reload
 docker-compose up --build
 ```
 
----
-
-## 🔑 Default Credentials
-
-| Resource     | Value                    |
-|--------------|--------------------------|
-| Admin email  | admin@qavach.com         |
-| Admin pass   | Admin@123                |
-| Mongo UI     | http://localhost:8081    |
-| Bull Board   | http://localhost:3001    |
-| Swagger docs | http://localhost:3000/docs |
-| Health check | http://localhost:3000/health |
-
----
-
-## 📦 Environment Variables
-
-See [`.env.example`](.env.example) for the full list. Key variables:
-
-| Variable | Description |
-|---|---|
-| `MONGODB_URI` | MongoDB connection string |
-| `REDIS_HOST` | Redis host |
-| `JWT_SECRET` | JWT signing secret |
-| `AWS_ACCESS_KEY_ID` | AWS credentials for SES |
-| `FIREBASE_PROJECT_ID` | Firebase project |
-| `MSG91_AUTH_KEY` | MSG91 auth key |
-| `MS_GRAPH_CLIENT_ID` | Microsoft Graph for staff calendar |
-
----
-
 ## 📡 API Reference
 
 Full Swagger docs at `/docs`. Key endpoints:
