@@ -148,7 +148,7 @@ curl -X POST http://localhost:3000/api/events/emit \
 - Production CORS uses an explicit origin allowlist; configure `CORS_ORIGINS` for browser clients. Development permits origins when no allowlist is configured.
 - Docker Compose protects MongoDB and Redis with credentials and binds their host ports to loopback interfaces. Redis uses `noeviction` so queue keys are not silently evicted under memory pressure.
 - Login and event-ingestion endpoints are rate-limited. Endpoints with request schemas validate payloads, and Helmet sets security headers.
-- Production startup rejects missing or weak-length JWT and service API secrets, and requires queue-dashboard credentials.
+- Production startup validates JWT, service API, queue-dashboard, MongoDB, Redis, and CORS configuration before accepting traffic.
 - Initial administrator credentials are supplied through environment variables and are never printed to logs.
 - Existing deployments must rotate or disable administrator accounts created by older seed scripts; updating the seeder does not change credentials already stored in MongoDB.
 
