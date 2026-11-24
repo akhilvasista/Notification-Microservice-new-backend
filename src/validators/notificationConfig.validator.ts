@@ -19,7 +19,11 @@ export const createConfigSchema = Joi.object({
     type: Joi.string()
       .valid('instant', 'delayed', 'scheduled')
       .required(),
-    delay: Joi.string().optional(),
+    delay: Joi.string().when('type', {
+      is: 'delayed',
+      then: Joi.required(),
+      otherwise: Joi.optional(),
+    }),
     time: Joi.string().optional(),
     startDate: Joi.date().optional(),
     endDate: Joi.date().optional(),
