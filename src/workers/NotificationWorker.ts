@@ -70,10 +70,12 @@ export class NotificationWorker {
 
       const idemKey = generateIdempotencyKey(userId, event, channel, templateId, eventId);
 
-      // Step 12: Idempotency check
-      const isDuplicate = await this.idempotency.isDuplicate(userId, event, channel, templateId, eventId);
-      if (isDuplicate) {
-        childLogger.info({ channel }, 'Duplicate notification skipped');
+      // Render before claiming so template errors do not hold a delivery claim.
+      const rendered = await this.templateEngine.render(templateId, fullContext);
+      const claim = await this.idempotency.claim(userId, event, channel, templateId, eventId);
+
+      if (!claim.claimed || !claim.claimToken) {
+        childLogger.info({ channel }, 'Notification already claimed or processed; skipping');
         await this.logService.createLog({
           userId, event, channel, templateId,
           status: 'skipped', idempotencyKey: idemKey, jobId: job.id,
@@ -82,8 +84,6 @@ export class NotificationWorker {
       }
 
       try {
-        // Render the template and dispatch the notification.
-        const rendered = await this.templateEngine.render(templateId, fullContext);
         const result = await this.dispatcher.dispatch({
           userId,
           channel,
@@ -92,15 +92,17 @@ export class NotificationWorker {
           subject: rendered.subject,
           body: rendered.body,
           title: rendered.title,
-          data: {
-            event,
-            type: event,
-          },
+          data: { event, type: event },
         });
 
-
         if (result.success) {
-          // Step 10: Log success
+          // Persist the completed claim immediately after provider success.
+          // If this write fails, retain the lease and fail the job rather than
+          // immediately releasing a key after a potentially successful send.
+          await this.idempotency.markProcessed(
+            userId, event, channel, templateId, claim.claimToken, eventId
+          );
+
           await this.logService.createLog({
             userId, event, channel, templateId,
             status: 'sent', idempotencyKey: idemKey, jobId: job.id,
@@ -108,19 +110,22 @@ export class NotificationWorker {
             sentAt: new Date(),
           } as Parameters<typeof this.logService.createLog>[0] & { sentAt: Date });
 
-          await this.idempotency.markProcessed(userId, event, channel, templateId, eventId);
           childLogger.info({ channel }, 'Notification sent successfully');
         } else {
-          // Handle failure with fallback
-          childLogger.warn({ channel, error: result.error }, 'Channel dispatch failed');
-
           await this.logService.createLog({
             userId, event, channel, templateId,
             status: 'failed', idempotencyKey: idemKey, jobId: job.id,
             errorMessage: result.error,
           });
 
-          // Step 4: Fallback logic (push fails → SMS)
+          // The dispatcher reports a failed delivery; release this claim so
+          // BullMQ retry can attempt it again.
+          await this.idempotency.releaseClaim(
+            userId, event, channel, templateId, claim.claimToken, eventId
+          );
+
+          childLogger.warn({ channel, error: result.error }, 'Channel dispatch failed');
+
           if (channel === 'push' && fallback?.sms && templateIds.sms) {
             childLogger.info('Attempting SMS fallback after push failure');
             await this.handleFallback(userId, event, templateIds.sms, fullContext, job.id || '');
@@ -136,7 +141,8 @@ export class NotificationWorker {
           errorMessage: errorMsg, attempt: (job.attemptsMade || 0) + 1,
         });
 
-        // Re-throw to trigger BullMQ retry (Step 11)
+        // Do not release on an unexpected exception: delivery may have reached
+        // the provider. The claim lease prevents immediate concurrent retries.
         throw error;
       }
     }
