@@ -5,6 +5,10 @@ const jwtSecret = process.env.JWT_SECRET;
 const serviceApiKey = process.env.SERVICE_API_KEY;
 const queueDashboardUsername = process.env.QUEUE_DASHBOARD_USERNAME;
 const queueDashboardPassword = process.env.QUEUE_DASHBOARD_PASSWORD;
+const corsOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 if (
   process.env.NODE_ENV === 'production' &&
   (!jwtSecret || jwtSecret.length < 32)
@@ -21,6 +25,18 @@ if (
   (!queueDashboardUsername || !queueDashboardPassword || queueDashboardPassword.length < 16)
 ) {
   throw new Error('QUEUE_DASHBOARD_USERNAME and a QUEUE_DASHBOARD_PASSWORD of at least 16 characters are required in production.');
+}
+
+if (process.env.NODE_ENV === 'production' && !process.env.MONGODB_URI) {
+  throw new Error('MONGODB_URI must be configured in production.');
+}
+
+if (process.env.NODE_ENV === 'production' && (!process.env.REDIS_PASSWORD || process.env.REDIS_PASSWORD.length < 16)) {
+  throw new Error('REDIS_PASSWORD must be configured with at least 16 characters in production.');
+}
+
+if (process.env.NODE_ENV === 'production' && corsOrigins.length === 0) {
+  throw new Error('CORS_ORIGINS must contain at least one allowed browser origin in production.');
 }
 
 export const config = {
