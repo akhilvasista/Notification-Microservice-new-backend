@@ -162,6 +162,12 @@ curl -X POST http://localhost:3000/api/events/emit \
 
 **Delivery semantics:** queue retries and external provider calls can produce at-least-once behavior. The current check-then-send-then-mark idempotency flow is not an atomic exactly-once guarantee; provider-side idempotency or an atomic reservation/claim workflow is needed before making that guarantee.
 
+## Current limitations
+
+- Bulk campaign recipient lookup and user-context enrichment are integration placeholders; connect them to an authenticated user service before enabling bulk campaigns in production.
+- Device registration and deregistration need end-user identity and device-ownership checks before those endpoints are exposed to untrusted clients.
+- Notification delivery is at-least-once under retries; exactly-once delivery is not guaranteed.
+
 ## Development commands
 
 | Command | Description |
