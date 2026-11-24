@@ -6,6 +6,8 @@ export interface IIdempotencyKey extends Document {
   event: string;
   channel: string;
   status: 'processed' | 'processing';
+  claimToken?: string;
+  leaseUntil?: Date;
   createdAt: Date;
 }
 
@@ -16,11 +18,13 @@ const IdempotencyKeySchema = new Schema<IIdempotencyKey>(
     event: { type: String, required: true },
     channel: { type: String, required: true },
     status: { type: String, enum: ['processed', 'processing'], default: 'processing' },
+    claimToken: { type: String },
+    leaseUntil: { type: Date },
   },
   { timestamps: true }
 );
 
-// Auto-expire after 30 days
+// Auto-expire processed and abandoned claims after 30 days.
 IdempotencyKeySchema.index({ createdAt: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 export const IdempotencyKey: Model<IIdempotencyKey> = mongoose.model(
