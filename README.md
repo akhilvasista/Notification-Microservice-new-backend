@@ -1,299 +1,214 @@
-# 🔔 Qavach Notification Microservice
+# Event-Driven Notification Service
 
-Production-grade, event-driven notification microservice supporting **Email** (Amazon SES), **Push** (Firebase FCM), and **SMS** (MSG91 with DLT compliance).
+A TypeScript and Node.js backend for processing application events and delivering asynchronous notifications across email, push, and SMS channels. The service combines rule-based workflows, scheduled jobs, background workers, template rendering, and delivery logging.
 
----
+## Highlights
 
-## 🏗 Architecture
+- **Event-driven processing** — accept validated events and evaluate notification rules.
+- **Asynchronous delivery** — process notification jobs with BullMQ and Redis.
+- **Multi-channel dispatch** — integrate email, push, and SMS providers behind a dispatcher layer.
+- **Scheduling** — support immediate and delayed notification workflows.
+- **Template rendering** — render reusable Handlebars templates with event and user context.
+- **Operational visibility** — persist delivery logs and expose health and queue metrics.
+- **Security controls** — role-protected administration, service-to-service event authentication, password hashing, rate limiting, and CORS allowlisting.
 
-```
-[API / Cron / External Service]
-         │
-         ▼
-  ┌─────────────┐
-  │ Event Layer │  POST /api/events/emit
-  └──────┬──────┘
-         │
-         ▼
-  ┌──────────────────┐
-  │  Event Processor │  Validates payload
-  └──────┬───────────┘
-         │
-         ▼
-  ┌─────────────┐
-  │ Rule Engine │  Fetches configs from DB → evaluates conditions
-  └──────┬──────┘
-         │
-         ▼
-  ┌───────────┐
-  │ Scheduler │  BullMQ: instant / delayed / repeating / cron
-  └──────┬────┘
-         │
-         ▼
-  ┌────────┐
-  │ Worker │  Executes job at scheduled time
-  └──┬─────┘
-     │  ① Check stop conditions
-     │  ② Build context
-     │  ③ Render Handlebars template
-     │  ④ Dispatch to channel
-     │  ⑤ Log result
-     │  ⑥ Idempotency check
-     │  ⑦ Retry on failure (exp. backoff)
-     ▼
-  ┌──────────────────────────┐
-  │  SES │ FCM │ MSG91       │
-  └──────────────────────────┘
+## Architecture
+
+```mermaid
+flowchart TD
+    A[Internal application / service] --> B[Express API]
+    B --> C[Validation and service authentication]
+    C --> D[Event processor]
+    D --> E[Rule engine]
+    E --> F[Scheduler]
+    F --> G[BullMQ]
+    G <--> H[(Redis)]
+    G --> I[Notification worker]
+    I --> J[Template engine]
+    J --> K[Notification dispatcher]
+    K --> L[Email provider]
+    K --> M[Push provider]
+    K --> N[SMS provider]
+    E <--> O[(MongoDB)]
+    I --> O
+    K --> O
 ```
 
----
+MongoDB stores notification configuration, templates, delivery logs, admin accounts, device tokens, and idempotency records. Redis backs the BullMQ queues and worker coordination.
 
-## 🚀 Quick Start
+## Technology stack
+
+| Area | Technologies |
+|---|---|
+| Runtime and language | Node.js 20+, TypeScript |
+| HTTP API | Express |
+| Persistence | MongoDB, Mongoose |
+| Background jobs | BullMQ, Redis, ioredis |
+| Authentication | JWT, Node.js scrypt password hashing |
+| Validation | Joi |
+| Templates | Handlebars |
+| Integrations | Amazon SES, Firebase Cloud Messaging, MSG91 |
+| Logging | Pino |
+| API documentation | Swagger / OpenAPI |
+| Testing | Jest, Supertest |
+| Containerization | Docker, Docker Compose |
+
+## Getting started
 
 ### Prerequisites
-- Node.js 20+
-- Docker + Docker Compose
-- MongoDB (via Docker)
-- Redis (via Docker)
 
-### 1 – Clone & configure
+- Node.js 20 or later
+- npm
+- Docker and Docker Compose
+- Git
+
+### 1. Clone and configure
 
 ```bash
-git clone <repo-url>
-cd notification-service
+git clone <repository-url>
+cd Notification-Microservice-new-backend
 cp .env.example .env
-# Edit .env with your AWS, Firebase, MSG91 credentials
 ```
 
-### 2 – Start infrastructure
+Update `.env` with local configuration. Generate unique random values for `JWT_SECRET` and `SERVICE_API_KEY`; do not use the example placeholders outside a disposable local environment.
+
+For local development, set `MONGODB_URI` to the authenticated localhost MongoDB URI shown in `.env.example`, set `REDIS_HOST=localhost`, and configure the provider credentials you intend to exercise. Use URL-safe generated passwords for the MongoDB and Redis credentials.
+
+### 2. Start MongoDB and Redis
 
 ```bash
-# Production
-docker-compose up -d
-
-# Development (includes Mongo Express + Bull Board UIs)
-docker-compose --profile dev up -d
+docker compose up -d mongo redis
 ```
 
-### 3 – Install & seed (development)
+### 3. Install dependencies and seed development data
 
 ```bash
-npm install
-npm run seed        # creates admin user + sample configs + templates
-npm run dev         # starts with hot-reload
+npm ci
+npm run seed
 ```
 
-### 4 – Run with Docker (full stack)
+The seed command creates the initial administrator and sample notification configuration/templates. Set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in `.env` first. The password must be at least 12 characters; no default administrator password is shipped.
+
+### 4. Start the API
 
 ```bash
-docker-compose up --build
+npm run dev
 ```
 
-## 📡 API Reference
+The API listens on the configured port (default `3000`). Swagger documentation is available at `/docs`.
 
-Full Swagger docs at `/docs`. Key endpoints:
+### Run the containerized service
 
-### Events
-```
-POST /api/events/emit          # Async – fire and forget
-POST /api/events/emit/sync     # Sync – wait for processing
-```
+Set production-quality values for `JWT_SECRET`, `SERVICE_API_KEY`, and `CORS_ORIGINS` in the environment, then run:
 
-### Admin (JWT required)
-```
-POST   /api/auth/login
-GET    /api/admin/configs
-POST   /api/admin/configs
-PATCH  /api/admin/configs/:id/toggle
-GET    /api/admin/templates
-POST   /api/admin/templates
-POST   /api/admin/templates/:id/preview
-POST   /api/admin/bulk
-GET    /api/admin/logs
-GET    /api/admin/metrics
-GET    /api/admin/metrics/queue
-POST   /api/admin/logs/:logId/retry
+```bash
+docker compose up --build -d
 ```
 
-### Devices
-```
-POST   /api/devices/register
-DELETE /api/devices/:token
-GET    /api/devices/user/:userId
-```
+## API overview
 
----
+| Area | Endpoint | Purpose |
+|---|---|---|
+| Authentication | `POST /api/auth/login` | Authenticate an administrator |
+| Authentication | `GET /api/auth/me` | Get the authenticated administrator |
+| Events | `POST /api/events/emit` | Accept an event for asynchronous processing |
+| Events | `POST /api/events/emit/sync` | Submit an event and wait for processing |
+| Devices | `POST /api/devices/register` | Register a push-notification device |
+| Devices | `DELETE /api/devices/:token` | Deregister a device |
+| Administration | `/api/admin/configs` | Manage notification rules |
+| Administration | `/api/admin/templates` | Manage notification templates |
+| Operations | `/api/admin/logs` | Inspect delivery logs |
+| Operations | `/api/admin/metrics` | Inspect notification metrics |
+| Operations | `/api/admin/metrics/queue` | Inspect queue metrics |
 
-## 🔔 Notification Scenarios
+The full request and response schemas are documented in the Swagger UI at `/docs`.
 
-### 1. User Signup → Add Child Reminder (15 days)
+### Event ingestion example
 
-```json
-POST /api/events/emit
-{
-  "event": "USER_SIGNED_UP",
-  "userId": "user_123",
-  "timestamp": "2026-05-18T10:00:00Z"
-}
-```
+Event-ingestion requests must include the configured service key in the `x-service-key` header whenever `SERVICE_API_KEY` is set. Production startup requires this key.
 
-→ Sends welcome immediately, then daily reminders for 15 days (stops when child added).
-
-### 2. Appointment Booked → Auto Reminders
-
-```json
-POST /api/events/emit
-{
-  "event": "APPOINTMENT_BOOKED",
-  "userId": "user_123",
-  "appointmentDate": "2026-06-15T10:00:00Z",
-  "centerId": "CENTER_BLR"
-}
+```bash
+curl -X POST http://localhost:3000/api/events/emit \
+  -H "Content-Type: application/json" \
+  -H "x-service-key: <SERVICE_API_KEY>" \
+  -d '{
+    "event": "USER_SIGNED_UP",
+    "userId": "user_123",
+    "timestamp": "2026-11-24T10:00:00.000Z"
+  }'
 ```
 
-→ Auto-schedules reminders at T-3 days, T-1 day, T-3 hours.
+## Security
 
-### 3. Bulk Campaign
+- Administrator passwords are stored using Node.js scrypt with a per-password random salt.
+- Existing SHA-256 password records are upgraded to scrypt after a successful login.
+- JWT-protected administration routes enforce role-based access for write operations.
+- Event ingestion uses a service API key in production.
+- The Bull Board queue dashboard is protected by dedicated HTTP Basic Auth credentials; production startup requires both credentials and a strong password.
+- Production CORS uses an explicit origin allowlist; configure `CORS_ORIGINS` for browser clients. Development permits origins when no allowlist is configured.
+- Docker Compose protects MongoDB and Redis with credentials and binds their host ports to loopback interfaces. Redis uses `noeviction` so queue keys are not silently evicted under memory pressure.
+- Login and event-ingestion endpoints are rate-limited. Endpoints with request schemas validate payloads, and Helmet sets security headers.
+- Production startup rejects missing or weak-length JWT and service API secrets, and requires queue-dashboard credentials.
+- Initial administrator credentials are supplied through environment variables and are never printed to logs.
+- Existing deployments must rotate or disable administrator accounts created by older seed scripts; updating the seeder does not change credentials already stored in MongoDB.
 
-```json
-POST /api/admin/bulk
-Authorization: Bearer <token>
-{
-  "templateId": "tmpl_add_child_reminder_email",
-  "channels": ["email", "push"],
-  "filters": { "inactiveDays": 15, "hasChild": false }
-}
-```
+## Reliability and operations
 
----
+- BullMQ provides asynchronous job execution and configurable retry/backoff behavior.
+- Idempotency records help detect notifications that have already been processed. A failed idempotency lookup fails the job instead of silently allowing a send.
+- Delivery logs record successful, failed, and skipped notification attempts.
+- `/health` and `/ready` expose service health information.
+- Pino provides structured application and worker logs.
 
-## 🗄 Database Collections
+**Delivery semantics:** queue retries and external provider calls can produce at-least-once behavior. The current check-then-send-then-mark idempotency flow is not an atomic exactly-once guarantee; provider-side idempotency or an atomic reservation/claim workflow is needed before making that guarantee.
 
-| Collection | Purpose |
+## Development commands
+
+| Command | Description |
 |---|---|
-| `notification_configs` | Business rules (event → channels, schedule, conditions) |
-| `notification_templates` | Handlebars templates for each channel |
-| `notification_logs` | Delivery audit trail (90-day TTL) |
-| `device_tokens` | FCM tokens per user |
-| `idempotency_keys` | Deduplication (30-day TTL) |
-| `scheduled_jobs` | Job tracking |
-| `admin_users` | Admin accounts |
-| `notification_metrics` | Aggregated daily metrics |
+| `npm run dev` | Start the API with development reload |
+| `npm run build` | Compile TypeScript into `dist/` |
+| `npm start` | Start the compiled service |
+| `npm run typecheck` | Run the TypeScript compiler without emitting files |
+| `npm run lint` | Run ESLint against TypeScript source files |
+| `npm test` | Run the Jest test suite |
+| `npm run test:unit` | Run unit tests |
+| `npm run test:integration` | Run integration tests (MongoDB and Redis required) |
+| `npm run seed` | Seed the administrator and sample notification data |
 
----
+Integration tests use a process-specific test database and remove that test database during teardown. Do not change the integration test database to a shared or production database.
 
-## ⚙️ Queue System
+## Continuous integration
 
-| Queue | Purpose |
-|---|---|
-| `notification` | Standard notifications (concurrency: 5) |
-| `bulk-notification` | Bulk campaigns (concurrency: 2, rate-limited) |
-| `dead-letter` | Failed jobs needing manual review |
+The GitHub Actions workflow installs dependencies with `npm ci`, runs TypeScript typechecking and the production build, and executes the Jest suite against MongoDB and Redis service containers.
 
-Retry: **3 attempts** with **exponential backoff** (5s, 10s, 20s).
+## Project structure
 
----
+```text
+src/
+├── config/          # Application, database, Redis and Swagger configuration
+├── controllers/     # HTTP request handlers
+├── dispatchers/     # Notification channel orchestration
+├── events/          # Event processing
+├── integrations/    # External provider integrations
+├── middleware/      # Authentication, validation and error handling
+├── models/          # Mongoose schemas
+├── monitoring/      # Health checks and scheduled jobs
+├── queue/           # BullMQ queue management
+├── routes/          # Express routes
+├── rule-engine/     # Notification rule evaluation
+├── scheduler/       # Job scheduling
+├── services/        # Idempotency, logging and user context
+├── templates/       # Handlebars template rendering
+├── utils/           # Shared utilities and structured logging
+├── validators/      # Request validation schemas
+└── workers/         # Background notification workers
 
-## 🧪 Tests
-
-```bash
-npm test              # all tests
-npm run test:unit     # unit tests only
-npm run test:integration  # requires running MongoDB
+tests/
+├── unit/
+└── integration/
 ```
 
----
+## Configuration
 
-## 🐳 Docker Commands
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Start with dev UIs
-docker-compose --profile dev up -d
-
-# View logs
-docker-compose logs -f notification-service
-
-# Rebuild service
-docker-compose up --build notification-service
-
-# Seed inside Docker
-docker-compose exec notification-service node -e "
-  require('./dist/scripts/seed');
-"
-
-# Stop all
-docker-compose down
-
-# Remove volumes (reset data)
-docker-compose down -v
-```
-
----
-
-## 📁 Folder Structure
-
-```
-notification-service/
-├── src/
-│   ├── config/          # App, DB, Redis, Swagger config
-│   ├── controllers/     # HTTP route handlers
-│   ├── dispatchers/     # Channel dispatch orchestration
-│   ├── events/          # Event types & processor
-│   ├── integrations/    # SES, FCM, MSG91, MS Graph clients
-│   ├── middleware/       # Auth, validation, error handler
-│   ├── models/          # Mongoose schemas
-│   ├── monitoring/      # Health check, cron jobs
-│   ├── queue/           # BullMQ queue manager
-│   ├── routes/          # Express router
-│   ├── rule-engine/     # Config evaluation logic
-│   ├── scheduler/       # Job scheduling abstraction
-│   ├── services/        # Idempotency, logging, user context
-│   ├── templates/       # Handlebars template engine
-│   ├── utils/           # Logger, errors, helpers
-│   ├── validators/      # Joi schemas
-│   ├── workers/         # BullMQ workers
-│   ├── app.ts           # Express app factory
-│   └── server.ts        # Bootstrap entry point
-├── tests/
-│   ├── unit/            # Unit tests (jest + mocks)
-│   └── integration/     # Integration tests (supertest)
-├── scripts/
-│   ├── seed.ts          # DB seed script
-│   └── mongo-init.js    # MongoDB init indexes
-├── docs/
-│   └── postman_collection.json
-├── .env.example
-├── Dockerfile
-├── docker-compose.yml
-├── jest.config.ts
-├── tsconfig.json
-└── package.json
-```
-
----
-
-## 🔐 Security
-
-- JWT authentication on all admin routes
-- Role-based access control (`super_admin`, `admin`, `viewer`)
-- Helmet.js security headers
-- CORS configuration
-- Rate limiting (100 req/15min default, 20 req/15min for auth)
-- Input validation via Joi on all endpoints
-- Passwords hashed with SHA-256
-- ENV-based secrets (never hardcoded)
-- DLT compliance for SMS (MSG91)
-
----
-
-## 📊 Monitoring
-
-- `/health` – liveness probe (MongoDB + Redis + Queue status)
-- `/ready` – readiness probe
-- `/api/admin/metrics` – notification delivery metrics
-- `/api/admin/metrics/queue` – BullMQ queue stats
-- Bull Board UI at `:3001` (dev profile)
-- Structured JSON logging via Pino
+See [`.env.example`](.env.example) for the complete environment-variable template. Never commit a populated `.env`, real provider credentials, production tokens, or private keys.

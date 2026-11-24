@@ -1,5 +1,3 @@
-import mongoose from 'mongoose';
-
 import { NotificationTemplate } from '../models/NotificationTemplate';
 
 import { NotificationConfig } from '../models/NotificationConfig';
@@ -9,6 +7,7 @@ import { parentTemplates } from './templates/parentTemplates';
 import { parentConfigs } from './templates/configs/parentConfigs';
 
 import { connectDatabase } from '../config/database';
+import { logger } from '../utils/logger';
 
 async function seedTemplates() {
   for (const template of parentTemplates) {
@@ -25,9 +24,7 @@ async function seedTemplates() {
       }
     );
 
-    console.log(
-      `✅ Template Seeded: ${template.templateId}`
-    );
+    logger.info({ templateId: template.templateId }, 'Notification template seeded');
   }
 }
 
@@ -47,9 +44,7 @@ async function seedConfigs() {
       }
     );
 
-    console.log(
-      `✅ Config Seeded: ${config.name}`
-    );
+    logger.info({ configName: config.name }, 'Notification config seeded');
   }
 }
 
@@ -57,21 +52,17 @@ async function runSeeder() {
   try {
     await connectDatabase();
 
-    console.log(
-      '🚀 Starting Notification Seeder...'
-    );
+    logger.info('Starting notification seeder');
 
     await seedTemplates();
 
     await seedConfigs();
 
-    console.log(
-      '🎉 Notification Seeder Completed'
-    );
+    logger.info('Notification seeder completed');
 
     process.exit(0);
   } catch (error) {
-    console.error(error);
+    logger.error({ error }, 'Notification seeder failed');
 
     process.exit(1);
   }

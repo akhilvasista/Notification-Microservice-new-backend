@@ -6,7 +6,7 @@
  */
 export class UserContextService {
   async buildContext(
-    userId: string,
+    _userId: string,
     baseContext: Record<string, unknown>
   ): Promise<Record<string, unknown>> {
     // In a real microservice architecture, you would call:
@@ -23,8 +23,8 @@ export class UserContextService {
   }
 
   async checkStopCondition(
-    userId: string,
-    stopConditions: Record<string, unknown>
+    _userId: string,
+    _stopConditions: Record<string, unknown>
   ): Promise<boolean> {
     /**
      * Check if any stop condition is met.

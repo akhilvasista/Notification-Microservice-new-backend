@@ -2,16 +2,23 @@ import mongoose from 'mongoose';
 import { config } from './index';
 import { logger } from '../utils/logger';
 
-export const connectDatabase = async (): Promise<void> => {
+/**
+ * Connect to MongoDB. Optional overrides make isolated integration-test
+ * databases possible without mutating process-wide configuration.
+ */
+export const connectDatabase = async (
+  uri: string = config.db.uri,
+  dbName: string = config.db.name
+): Promise<void> => {
   try {
     mongoose.set('strictQuery', true);
-    await mongoose.connect(config.db.uri, {
-      dbName: config.db.name,
+    await mongoose.connect(uri, {
+      dbName,
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
     });
-    logger.info('MongoDB connected successfully');
+    logger.info({ dbName }, 'MongoDB connected successfully');
 
     mongoose.connection.on('disconnected', () => {
       logger.warn('MongoDB disconnected. Reconnecting...');
@@ -21,8 +28,8 @@ export const connectDatabase = async (): Promise<void> => {
       logger.error({ err }, 'MongoDB connection error');
     });
   } catch (error) {
-    logger.error({ error }, 'Failed to connect to MongoDB');
-    process.exit(1);
+    logger.error({ error, dbName }, 'Failed to connect to MongoDB');
+    throw error;
   }
 };
 

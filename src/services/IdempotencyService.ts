@@ -4,8 +4,8 @@ import { logger } from '../utils/logger';
 
 export class IdempotencyService {
   /**
-   * Check if a notification has already been processed.
-   * Returns true if it's a duplicate (should skip).
+   * Check whether a notification has already been processed.
+   * A failed database lookup must fail the job rather than permit a duplicate send.
    */
   async isDuplicate(
     userId: string,
@@ -18,18 +18,24 @@ export class IdempotencyService {
 
     try {
       const existing = await IdempotencyKey.findOne({ key });
+
       if (existing) {
         logger.debug({ key, userId, event, channel }, 'Duplicate notification detected');
         return true;
       }
+
       return false;
-    } catch {
-      return false;
+    } catch (error) {
+      logger.error(
+        { error, key, userId, event, channel },
+        'Idempotency lookup failed; refusing to send without a duplicate check'
+      );
+      throw error;
     }
   }
 
   /**
-   * Mark a notification as processed
+   * Mark a notification as processed.
    */
   async markProcessed(
     userId: string,

@@ -8,10 +8,23 @@ export class AuthController {
   login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { email, password } = req.body;
-      if (!email || !password) throw new ValidationError('Email and password required');
 
-      const admin = await AdminUser.findOne({ email: email.toLowerCase(), isActive: true }).select('+password');
-      if (!admin || !admin.comparePassword(password)) {
+      if (
+        typeof email !== 'string' ||
+        typeof password !== 'string' ||
+        !email.trim() ||
+        !password
+      ) {
+        throw new ValidationError('Email and password required');
+      }
+
+      const admin = await AdminUser.findOne({
+        email: email.trim().toLowerCase(),
+        isActive: true,
+      }).select('+password');
+
+      // Password comparison is asynchronous because the password KDF is deliberately expensive.
+      if (!admin || !(await admin.comparePassword(password))) {
         throw new UnauthorizedError('Invalid credentials');
       }
 
@@ -35,7 +48,11 @@ export class AuthController {
     }
   };
 
-  me = async (req: Request & { admin?: { id: string } }, res: Response, next: NextFunction): Promise<void> => {
+  me = async (
+    req: Request & { admin?: { id: string } },
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const admin = await AdminUser.findById(req.admin!.id).select('-password');
       res.json({ success: true, data: admin });

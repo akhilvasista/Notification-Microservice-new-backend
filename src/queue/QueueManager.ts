@@ -1,4 +1,4 @@
-import { Queue, Worker, QueueEvents, Job } from 'bullmq';
+import { Queue, QueueEvents } from 'bullmq';
 import { getRedisClient } from '../config/redis';
 import { config } from '../config';
 import { logger } from '../utils/logger';

@@ -66,11 +66,6 @@ export class NotificationWorker {
     // Process each channel
     for (const channel of channels) {
       const templateId = templateIds[channel];
-      console.log('========== TEMPLATE DEBUG ==========');
-console.log('EVENT:', event);
-console.log('CHANNEL:', channel);
-console.log('TEMPLATE ID:', templateId);
-console.log('===================================');
       if (!templateId) continue;
 
       const idemKey = generateIdempotencyKey(userId, event, channel, templateId, eventId);
@@ -87,18 +82,9 @@ console.log('===================================');
       }
 
       try {
-        // Step 8: Render template
-         console.log('BEFORE RENDER:', channel);
+        // Render the template and dispatch the notification.
         const rendered = await this.templateEngine.render(templateId, fullContext);
-        console.log('AFTER RENDER:', channel);
-       
-
-        // Step 9: Dispatch
-        console.log('BEFORE DISPATCH:', channel);
-        const result = await this.dispatcher.dispatch
-        
-        ({
-         
+        const result = await this.dispatcher.dispatch({
           userId,
           channel,
           userEmail: fullContext.email as string,
@@ -107,12 +93,11 @@ console.log('===================================');
           body: rendered.body,
           title: rendered.title,
           data: {
-           event,
+            event,
             type: event,
-                 },
+          },
         });
 
-         console.log('AFTER DISPATCH:', channel, result);
 
         if (result.success) {
           // Step 10: Log success

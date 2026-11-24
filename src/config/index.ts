@@ -1,15 +1,34 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-const requireEnv = (key: string): string => {
-  const val = process.env[key];
-  if (!val && process.env.NODE_ENV === 'production') {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
-  return val || '';
-};
+const jwtSecret = process.env.JWT_SECRET;
+const serviceApiKey = process.env.SERVICE_API_KEY;
+const queueDashboardUsername = process.env.QUEUE_DASHBOARD_USERNAME;
+const queueDashboardPassword = process.env.QUEUE_DASHBOARD_PASSWORD;
+if (
+  process.env.NODE_ENV === 'production' &&
+  (!jwtSecret || jwtSecret.length < 32)
+) {
+  throw new Error('JWT_SECRET must be set to a random value of at least 32 characters in production.');
+}
+
+if (process.env.NODE_ENV === 'production' && (!serviceApiKey || serviceApiKey.length < 32)) {
+  throw new Error('SERVICE_API_KEY must be set to a random value of at least 32 characters in production.');
+}
+
+if (
+  process.env.NODE_ENV === 'production' &&
+  (!queueDashboardUsername || !queueDashboardPassword || queueDashboardPassword.length < 16)
+) {
+  throw new Error('QUEUE_DASHBOARD_USERNAME and a QUEUE_DASHBOARD_PASSWORD of at least 16 characters are required in production.');
+}
 
 export const config = {
+  serviceApiKey: serviceApiKey || '',
+  queueDashboard: {
+    username: queueDashboardUsername || '',
+    password: queueDashboardPassword || '',
+  },
   app: {
     env: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT || '3000', 10),
@@ -26,7 +45,7 @@ export const config = {
     db: parseInt(process.env.REDIS_DB || '0', 10),
   },
   jwt: {
-    secret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
+    secret: jwtSecret || 'dev-secret-change-in-production',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   aws: {
