@@ -1,7 +1,7 @@
 {
   "name": "notification-service",
   "version": "1.0.0",
-  "description": "Production-grade event-driven notification microservice",
+  "description": "Event-driven notification microservice built with Node.js, TypeScript, Express, MongoDB, Redis and BullMQ",
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",

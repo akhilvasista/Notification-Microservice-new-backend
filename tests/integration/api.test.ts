@@ -3,24 +3,40 @@
  * Use `docker-compose up mongo redis -d` before running.
  */
 import request from 'supertest';
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { createApp } from '../../src/app';
 import { connectDatabase } from '../../src/config/database';
 import { AdminUser } from '../../src/models/AdminUser';
 import { NotificationConfig } from '../../src/models/NotificationConfig';
 import { NotificationTemplate } from '../../src/models/NotificationTemplate';
+import { config } from '../../src/config';
 
 const app = createApp();
+const testDatabaseName = `notification_test_${process.pid}`;
 let authToken: string;
 
 beforeAll(async () => {
-  process.env.MONGODB_URI = 'mongodb://localhost:27017/notification_test';
-  process.env.JWT_SECRET = 'test-secret';
-  await connectDatabase();
+  config.jwt.secret = 'integration-test-secret-at-least-32-characters';
+  config.serviceApiKey = 'integration-test-service-key-at-least-32';
+  config.queueDashboard.username = 'test-operator';
+  config.queueDashboard.password = 'integration-dashboard-password';
+  await connectDatabase(config.db.uri, testDatabaseName);
 
   // Seed test admin
   await AdminUser.deleteMany({});
   await AdminUser.create({ email: 'test@admin.com', password: 'Test@123', name: 'Test Admin', role: 'super_admin' });
+
+  const legacyAdmin = await AdminUser.create({
+    email: 'legacy@admin.com',
+    password: 'Legacy@123',
+    name: 'Legacy Admin',
+    role: 'admin',
+  });
+  await AdminUser.collection.updateOne(
+    { _id: legacyAdmin._id },
+    { $set: { password: crypto.createHash('sha256').update('Legacy@123').digest('hex') } }
+  );
 });
 
 afterAll(async () => {
@@ -40,6 +56,18 @@ describe('Auth API', () => {
     authToken = res.body.data.token;
   });
 
+  it('POST /api/auth/login – upgrades a legacy SHA-256 password after successful login', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'legacy@admin.com', password: 'Legacy@123' });
+
+    expect(res.status).toBe(200);
+
+    const migratedAdmin = await AdminUser.findOne({ email: 'legacy@admin.com' }).select('+password');
+    expect(migratedAdmin?.password).toMatch(/^scrypt\$/);
+    expect(await migratedAdmin?.comparePassword('Legacy@123')).toBe(true);
+  });
+
   it('POST /api/auth/login – invalid credentials', async () => {
     const res = await request(app)
       .post('/api/auth/login')
@@ -56,6 +84,13 @@ describe('Auth API', () => {
   });
 });
 
+describe('Queue Dashboard Security', () => {
+  it('GET /admin/queues – rejects unauthenticated access', async () => {
+    const res = await request(app).get('/admin/queues');
+    expect(res.status).toBe(401);
+  });
+});
+
 describe('Health Check', () => {
   it('GET /health returns healthy status', async () => {
     const res = await request(app).get('/health');
@@ -65,6 +100,14 @@ describe('Health Check', () => {
 });
 
 describe('Config API', () => {
+  it('POST /api/admin/configs – rejects unauthenticated writes', async () => {
+    const res = await request(app)
+      .post('/api/admin/configs')
+      .send({ event: 'UNAUTHORIZED_EVENT' });
+
+    expect(res.status).toBe(401);
+  });
+
   const configPayload = {
     event: 'TEST_EVENT',
     name: 'Test Config',
@@ -105,6 +148,14 @@ describe('Config API', () => {
 });
 
 describe('Template API', () => {
+  it('POST /api/admin/templates – rejects unauthenticated writes', async () => {
+    const res = await request(app)
+      .post('/api/admin/templates')
+      .send({ templateId: 'unauthorized', name: 'Unauthorized', type: 'email', body: 'No access' });
+
+    expect(res.status).toBe(401);
+  });
+
   const templatePayload = {
     templateId: 'tmpl_integration_test',
     name: 'Integration Test Template',
@@ -136,9 +187,18 @@ describe('Template API', () => {
 });
 
 describe('Event API', () => {
+  it('POST /api/events/emit – rejects missing service credentials', async () => {
+    const res = await request(app)
+      .post('/api/events/emit')
+      .send({ event: 'USER_SIGNED_UP', userId: 'test_user_1' });
+
+    expect(res.status).toBe(401);
+  });
+
   it('POST /api/events/emit – returns 202 accepted', async () => {
     const res = await request(app)
       .post('/api/events/emit')
+      .set('x-service-key', config.serviceApiKey)
       .send({
         event: 'USER_SIGNED_UP',
         userId: 'test_user_1',
@@ -152,6 +212,7 @@ describe('Event API', () => {
   it('POST /api/events/emit – rejects missing userId', async () => {
     const res = await request(app)
       .post('/api/events/emit')
+      .set('x-service-key', config.serviceApiKey)
       .send({ event: 'USER_SIGNED_UP', timestamp: new Date().toISOString() });
 
     expect(res.status).toBe(400);

@@ -1,37 +1,29 @@
-
-
-
-
-
-
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Document, Model, Schema } from 'mongoose';
 
 export interface IConditions {
   [key: string]: boolean | string | number;
 }
 
 export interface ISchedule {
-  type: 'instant' | 'scheduled';
-
+  type: 'instant' | 'delayed' | 'scheduled';
+  delay?: string;
+  time?: string;
   startDate?: Date;
-
   endDate?: Date;
-
   timezone?: string;
-
   cronExpression?: string;
-
   occurrence?: {
     frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
-
     interval?: number;
-
     times?: string[];
-
     daysOfWeek?: number[];
-
     daysOfMonth?: number[];
   };
+}
+
+export interface IRepeat {
+  count: number;
+  frequency: 'hourly' | 'daily' | 'weekly' | 'monthly';
 }
 
 export interface IFallback {
@@ -42,36 +34,24 @@ export interface IFallback {
 
 export interface INotificationConfig extends Document {
   event: string;
-
   name: string;
-
   description?: string;
-
   conditions: IConditions;
-
   channels: ('email' | 'push' | 'sms' | 'inapp')[];
-
   templateIds: {
     email?: string;
     push?: string;
     sms?: string;
     inapp?: string;
   };
-
   schedule: ISchedule;
-
+  repeat?: IRepeat;
   stopConditions?: IConditions;
-
   fallback?: IFallback;
-
   priority: 'low' | 'normal' | 'high' | 'critical';
-
   isActive: boolean;
-
   metadata?: Record<string, unknown>;
-
   createdAt: Date;
-
   updatedAt: Date;
 }
 
@@ -82,110 +62,82 @@ const NotificationConfigSchema = new Schema<INotificationConfig>(
       required: true,
       index: true,
     },
-
     name: {
       type: String,
       required: true,
     },
-
     description: {
       type: String,
     },
-
     conditions: {
       type: Schema.Types.Mixed,
       default: {},
     },
-
     channels: {
       type: [String],
       enum: ['email', 'push', 'sms', 'inapp'],
       required: true,
     },
-
     templateIds: {
       email: { type: String },
       push: { type: String },
       sms: { type: String },
+      inapp: { type: String },
     },
-
     schedule: {
       type: {
         type: String,
-        enum: ['instant', 'scheduled'],
+        enum: ['instant', 'delayed', 'scheduled'],
         required: true,
       },
-
-      startDate: {
-        type: Date,
-      },
-
-      endDate: {
-        type: Date,
-      },
-
+      delay: { type: String },
+      time: { type: String },
+      startDate: { type: Date },
+      endDate: { type: Date },
       timezone: {
         type: String,
         default: 'Asia/Kolkata',
       },
-
-      cronExpression: {
-        type: String,
-      },
-
+      cronExpression: { type: String },
       occurrence: {
         frequency: {
           type: String,
           enum: ['daily', 'weekly', 'monthly', 'yearly'],
         },
-
         interval: {
           type: Number,
           default: 1,
         },
-
-        times: [
-          {
-            type: String,
-          },
-        ],
-
-        daysOfWeek: [
-          {
-            type: Number,
-          },
-        ],
-
-        daysOfMonth: [
-          {
-            type: Number,
-          },
-        ],
+        times: [{ type: String }],
+        daysOfWeek: [{ type: Number }],
+        daysOfMonth: [{ type: Number }],
       },
     },
-
+    repeat: {
+      count: { type: Number, min: 1 },
+      frequency: {
+        type: String,
+        enum: ['hourly', 'daily', 'weekly', 'monthly'],
+      },
+    },
     stopConditions: {
       type: Schema.Types.Mixed,
     },
-
     fallback: {
       sms: { type: Boolean },
       email: { type: Boolean },
       push: { type: Boolean },
     },
-
     priority: {
       type: String,
       enum: ['low', 'normal', 'high', 'critical'],
       default: 'normal',
     },
-
     isActive: {
       type: Boolean,
       default: true,
       index: true,
     },
-
     metadata: {
       type: Schema.Types.Mixed,
     },
@@ -193,14 +145,10 @@ const NotificationConfigSchema = new Schema<INotificationConfig>(
   { timestamps: true }
 );
 
-NotificationConfigSchema.index({
-  event: 1,
-  isActive: 1,
-});
+NotificationConfigSchema.index({ event: 1, isActive: 1 });
 
-export const NotificationConfig: Model<INotificationConfig> =
-  mongoose.model(
-    'NotificationConfig',
-    NotificationConfigSchema,
-    'notification_configs'
-  );
+export const NotificationConfig: Model<INotificationConfig> = mongoose.model(
+  'NotificationConfig',
+  NotificationConfigSchema,
+  'notification_configs'
+);

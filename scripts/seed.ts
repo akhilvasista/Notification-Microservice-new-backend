@@ -12,7 +12,7 @@ import { NotificationConfig } from '../src/models/NotificationConfig';
 import { NotificationTemplate } from '../src/models/NotificationTemplate';
 import { logger } from '../src/utils/logger';
 
-const ADMIN = { email: 'admin@qavach.com', password: 'Admin@123', name: 'Super Admin', role: 'super_admin' as const };
+const ADMIN_NAME = process.env.SEED_ADMIN_NAME?.trim() || 'Platform Administrator';
 
 // ── Templates ──────────────────────────────────────────────────────────────
 const TEMPLATES = [
@@ -365,16 +365,30 @@ const CONFIGS = [
 
 // ── Main ───────────────────────────────────────────────────────────────────
 const seed = async (): Promise<void> => {
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminPassword || adminPassword.length < 12) {
+    throw new Error(
+      'Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD (at least 12 characters) before running the seed script.'
+    );
+  }
+
   await mongoose.connect(config.db.uri, { dbName: config.db.name });
   logger.info('Connected to MongoDB for seeding');
 
-  // Admin user
-  const existingAdmin = await AdminUser.findOne({ email: ADMIN.email });
+  // Create the initial administrator without shipping a default credential.
+  const existingAdmin = await AdminUser.findOne({ email: adminEmail });
   if (!existingAdmin) {
-    await AdminUser.create(ADMIN);
-    logger.info(`Admin created: ${ADMIN.email} / ${ADMIN.password}`);
+    await AdminUser.create({
+      email: adminEmail,
+      password: adminPassword,
+      name: ADMIN_NAME,
+      role: 'super_admin',
+    });
+    logger.info({ email: adminEmail }, 'Initial administrator account created');
   } else {
-    logger.info('Admin already exists, skipping');
+    logger.info({ email: adminEmail }, 'Administrator already exists; skipping creation');
   }
 
   // Templates

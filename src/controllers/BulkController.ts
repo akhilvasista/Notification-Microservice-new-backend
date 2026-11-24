@@ -1,14 +1,13 @@
-import { Request, Response, NextFunction } from 'express';
+import { Response, NextFunction } from 'express';
 import { Scheduler } from '../scheduler/Scheduler';
 import { AuthRequest } from '../middleware/auth';
-import { config } from '../config';
-import { chunk, sleep, generateId } from '../utils/helpers';
+import { generateId } from '../utils/helpers';
 import { logger } from '../utils/logger';
 
 const scheduler = new Scheduler();
 
 // In production, this would query a User microservice
-const mockFetchUsers = async (filters: Record<string, unknown>): Promise<Array<{ userId: string; email: string; phone: string }>> => {
+const mockFetchUsers = async (_filters: Record<string, unknown>): Promise<Array<{ userId: string; email: string; phone: string }>> => {
   // Placeholder - integrate with your user service
   return [];
 };
@@ -17,7 +16,6 @@ export class BulkController {
   trigger = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { templateId, channels, filters, scheduledAt } = req.body;
-      const adminId = 'local-test-admin';
       const campaignId = generateId();
 
       // Fetch users based on filters
@@ -29,9 +27,6 @@ export class BulkController {
       }
 
       logger.info({ campaignId, userCount: users.length, channels }, 'Bulk campaign started');
-
-      // Process in batches to avoid memory issues
-      const batches = chunk(users, config.rateLimit.bulkBatchSize);
 
       const jobPayloads = users.flatMap((user) =>
         channels.map((channel: 'email' | 'push' | 'sms') => ({

@@ -9,10 +9,6 @@ import { BulkNotificationWorker } from './workers/BulkNotificationWorker';
 import { CronJobs } from './monitoring/CronJobs';
 import { eventProcessor } from './routes';
 import { queueManager } from './queue/QueueManager';
-import { createBullBoard } from '@bull-board/api';
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
-import { ExpressAdapter } from '@bull-board/express';
-import { QUEUE_NAMES } from './queue/QueueManager';
 
 let notificationWorker: NotificationWorker;
 let bulkWorker: BulkNotificationWorker;

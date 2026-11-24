@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { DeviceToken } from '../models/DeviceToken';
-import { NotFoundError } from '../utils/errors';
 
 export class DeviceController {
   register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

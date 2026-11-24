@@ -30,9 +30,10 @@ describe('IdempotencyService', () => {
     expect(IdempotencyKey.findOneAndUpdate).toHaveBeenCalled();
   });
 
-  it('returns false gracefully when DB throws', async () => {
-    (IdempotencyKey.findOne as jest.Mock).mockRejectedValue(new Error('DB down'));
-    const result = await service.isDuplicate('u1', 'EVENT', 'email', 'tmpl_1');
-    expect(result).toBe(false);
+  it('propagates database failures so the worker cannot send without a duplicate check', async () => {
+    const databaseError = new Error('DB down');
+    (IdempotencyKey.findOne as jest.Mock).mockRejectedValue(databaseError);
+
+    await expect(service.isDuplicate('u1', 'EVENT', 'email', 'tmpl_1')).rejects.toBe(databaseError);
   });
 });
