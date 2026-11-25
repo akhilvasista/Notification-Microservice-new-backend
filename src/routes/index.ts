@@ -45,8 +45,8 @@ router.post('/events/emit', authenticateService, apiRateLimiter, validate(emitEv
 router.post('/events/emit/sync', authenticateService, apiRateLimiter, validate(emitEventSchema), eventCtrl.emitSync);
 
 // Device registration endpoints used by client applications.
-router.post('/devices/register', apiRateLimiter, deviceCtrl.register);
-router.delete('/devices/:token', apiRateLimiter, deviceCtrl.deregister);
+router.post('/devices/register', authenticateService, apiRateLimiter, deviceCtrl.register);
+router.delete('/devices/:token', authenticateService, apiRateLimiter, deviceCtrl.deregister);
 router.get('/devices/user/:userId', authenticate, deviceCtrl.getUserDevices);
 
 // Notification configuration management.

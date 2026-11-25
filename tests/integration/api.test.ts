@@ -220,11 +220,34 @@ describe('Event API', () => {
 });
 
 describe('Device API', () => {
-  it('POST /api/devices/register – registers device token', async () => {
+  it('POST /api/devices/register – rejects requests without service credentials', async () => {
     const res = await request(app)
       .post('/api/devices/register')
+      .send({ userId: 'test_user_1', token: 'fcm_test_token_unauthorized', platform: 'android' });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('POST /api/devices/register – registers a device for a trusted service caller', async () => {
+    const res = await request(app)
+      .post('/api/devices/register')
+      .set('x-service-key', config.serviceApiKey)
       .send({ userId: 'test_user_1', token: 'fcm_test_token_123', platform: 'android' });
 
     expect(res.status).toBe(201);
+  });
+
+  it('DELETE /api/devices/:token – rejects requests without service credentials', async () => {
+    const res = await request(app).delete('/api/devices/fcm_test_token_123');
+
+    expect(res.status).toBe(401);
+  });
+
+  it('DELETE /api/devices/:token – allows a trusted service caller', async () => {
+    const res = await request(app)
+      .delete('/api/devices/fcm_test_token_123')
+      .set('x-service-key', config.serviceApiKey);
+
+    expect(res.status).toBe(200);
   });
 });
