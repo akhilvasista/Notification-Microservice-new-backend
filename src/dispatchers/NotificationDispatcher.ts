@@ -7,7 +7,7 @@ import { InAppNotificationService } from '../services/InAppNotificationService';
 
 export interface DispatchPayload {
   userId: string;
-  channel: 'email' | 'push' | 'sms' |'inapp';
+  channel: 'email' | 'push' | 'sms' | 'inapp';
   userEmail?: string;
   userPhone?: string;
   subject?: string;
@@ -19,7 +19,7 @@ export interface DispatchPayload {
 
 export interface DispatchResult {
   success: boolean;
-  channel: 'email' | 'push' | 'sms' |'inapp';
+  channel: 'email' | 'push' | 'sms' | 'inapp';
   providerResponse?: Record<string, unknown>;
   error?: string;
 }
@@ -39,38 +39,18 @@ export class NotificationDispatcher {
 
   async dispatch(payload: DispatchPayload): Promise<DispatchResult> {
     try {
-      // switch (payload.channel) {
-      //   case 'email':
-      //     return await this.sendEmail(payload);
-      //   case 'push':
-      //     return await this.sendPush(payload);
-      //   case 'sms':
-      //     return await this.sendSMS(payload);
-      //   default:
-      //     throw new Error(`Unknown channel: ${payload.channel}`);
-      // }
-
-
-    switch (payload.channel) {
-  case 'email':
-    return await this.sendEmail(payload);
-
-  case 'push':
-    return await this.sendPush(payload);
-
-  case 'sms':
-    return await this.sendSMS(payload);
-
-  case 'inapp':
-    return await this.sendInApp(payload);
-
-  default:
-    throw new Error(`Unknown channel: ${payload.channel}`);
-}
-
-
-
-
+      switch (payload.channel) {
+        case 'email':
+          return await this.sendEmail(payload);
+        case 'push':
+          return await this.sendPush(payload);
+        case 'sms':
+          return await this.sendSMS(payload);
+        case 'inapp':
+          return await this.sendInApp(payload);
+        default:
+          throw new Error(`Unknown channel: ${payload.channel}`);
+      }
     } catch (error) {
       logger.error({ error, channel: payload.channel, userId: payload.userId }, 'Dispatch failed');
       return {
@@ -96,15 +76,19 @@ export class NotificationDispatcher {
   }
 
   private async sendPush(payload: DispatchPayload): Promise<DispatchResult> {
-    const deviceTokens = await DeviceToken.find({ userId: payload.userId, isActive: true }).lean();
+    const deviceTokens = await DeviceToken.find({
+      userId: payload.userId,
+      isActive: true,
+    }).lean();
+
     if (deviceTokens.length === 0) {
       return { success: false, channel: 'push', error: 'No device tokens' };
     }
 
     const results = await Promise.allSettled(
-      deviceTokens.map((dt) =>
+      deviceTokens.map((device) =>
         this.fcm.send({
-          token: dt.token,
+          token: device.token,
           title: payload.title || 'Notification',
           body: payload.body,
           data: payload.data,
@@ -112,8 +96,17 @@ export class NotificationDispatcher {
       )
     );
 
-    const success = results.some((r) => r.status === 'fulfilled');
-    return { success, channel: 'push', providerResponse: { sent: deviceTokens.length } };
+    const success = results.some((result) => result.status === 'fulfilled');
+
+    return {
+      success,
+      channel: 'push',
+      providerResponse: {
+        attempted: deviceTokens.length,
+        sent: results.filter((result) => result.status === 'fulfilled').length,
+        failed: results.filter((result) => result.status === 'rejected').length,
+      },
+    };
   }
 
   private async sendSMS(payload: DispatchPayload): Promise<DispatchResult> {
@@ -130,21 +123,19 @@ export class NotificationDispatcher {
     return { success: true, channel: 'sms', providerResponse: result };
   }
 
-private async sendInApp(
-  payload: DispatchPayload
-): Promise<DispatchResult> {
-  await this.inApp.create({
-    userId: payload.userId,
-    event: payload.data?.event || 'UNKNOWN',
-    title: payload.title || 'Notification',
-    body: payload.body,
-    type: payload.data?.type || 'general',
-    metadata: payload.data || {},
-  });
+  private async sendInApp(payload: DispatchPayload): Promise<DispatchResult> {
+    await this.inApp.create({
+      userId: payload.userId,
+      event: payload.data?.event || 'UNKNOWN',
+      title: payload.title || 'Notification',
+      body: payload.body,
+      type: payload.data?.type || 'general',
+      metadata: payload.data || {},
+    });
 
-  return {
-    success: true,
-    channel: 'inapp',
-  };
-}
+    return {
+      success: true,
+      channel: 'inapp',
+    };
+  }
 }
