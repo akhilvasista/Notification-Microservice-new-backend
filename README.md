@@ -121,7 +121,7 @@ docker compose up --build -d
 | Operations | `/api/admin/metrics` | Inspect notification metrics |
 | Operations | `/api/admin/metrics/queue` | Inspect queue metrics |
 
-The full request and response schemas are documented in the Swagger UI at `/docs`.
+The full request and response schemas are documented in the Swagger UI at `/docs`. Device-management endpoints are intended for trusted backend callers; they are not a replacement for end-user authentication and ownership checks.
 
 ### Event ingestion example
 
@@ -176,7 +176,7 @@ curl -X POST http://localhost:3000/api/events/emit \
 | `npm run build` | Compile TypeScript into `dist/` |
 | `npm start` | Start the compiled service |
 | `npm run typecheck` | Run the TypeScript compiler without emitting files |
-| `npm run lint` | Run ESLint against TypeScript source files |
+| `npm run lint` | Run ESLint against application source, tests, and seed scripts |
 | `npm test` | Run the Jest test suite |
 | `npm run test:unit` | Run unit tests |
 | `npm run test:integration` | Run integration tests (MongoDB and Redis required) |
