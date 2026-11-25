@@ -1,6 +1,14 @@
 node_modules/
 dist/
 logs/
-.env
 coverage/
+
+# Environment files: keep only the committed template
+.env
+.env.*
+!.env.example
+
+# Local/editor and generated files
+*.log
 *.js.map
+.DS_Store
