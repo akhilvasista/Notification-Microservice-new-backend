@@ -160,7 +160,7 @@ curl -X POST http://localhost:3000/api/events/emit \
 - `/health` and `/ready` expose service health information.
 - Pino provides structured application and worker logs.
 
-**Delivery semantics:** queue retries and external provider calls can produce at-least-once behavior. The current check-then-send-then-mark idempotency flow is not an atomic exactly-once guarantee; provider-side idempotency or an atomic reservation/claim workflow is needed before making that guarantee.
+**Delivery semantics:** the claim prevents concurrent workers from taking the same active key, but it does not provide exactly-once delivery. A process can crash after a provider accepts a message but before the completion record is persisted; an expired claim may then be retried. Provider-side idempotency keys and provider-specific delivery reconciliation are needed to reduce that remaining duplicate-delivery window. Delivery should be treated as at-least-once.
 
 ## Current limitations
 
