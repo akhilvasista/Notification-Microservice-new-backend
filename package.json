@@ -11,7 +11,7 @@
     "test:unit": "jest tests/unit --forceExit",
     "test:integration": "jest tests/integration --forceExit",
     "seed": "ts-node scripts/seed.ts",
-    "lint": "eslint src --ext .ts",
+    "lint": "eslint src tests scripts --ext .ts",
     "typecheck": "tsc --noEmit",
     "seed:notifications": "ts-node src/seeds/seedNotifications.ts"
   },
